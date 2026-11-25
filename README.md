@@ -1,0 +1,1634 @@
+[ForgeDefect4.html](https://github.com/user-attachments/files/35406536/ForgeDefect4.html)
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forge Defect Log - ระบบบันทึกปัญหาการผลิต</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex overflow-x-hidden">
+
+    <!-- Backdrop สำหรับจอมือถือเวลาเปิด Sidebar -->
+    <div id="sidebarBackdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-slate-900/50 z-20 hidden lg:hidden"></div>
+
+    <!-- แถบเมนูด้านข้างซ้าย (Sidebar) -->
+    <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-30 w-64 bg-[#111827] text-slate-200 flex flex-col transition-all duration-300 -translate-x-full lg:translate-x-0 shrink-0">
+        
+        <!-- ส่วนหัว Sidebar -->
+        <div class="p-4 border-b border-slate-800 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow shrink-0">
+                ⚙️
+            </div>
+            <div class="overflow-hidden">
+                <h1 class="text-base font-bold text-white tracking-wide truncate">Forge Defect Log</h1>
+                <p class="text-[11px] text-slate-400 tracking-wider uppercase truncate">ระบบบันทึกปัญหาการผลิต</p>
+            </div>
+        </div>
+
+        <!-- รายการเมนูหลัก -->
+        <div class="flex-1 py-4 px-3 space-y-1">
+            <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">เมนูหลัก</p>
+            
+            <button type="button" id="nav-dashboard" onclick="switchPage('dashboard')" 
+                class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all bg-gradient-to-r from-blue-600/30 to-indigo-600/20 text-white border-l-4 border-blue-500">
+                <span class="text-base">📈</span>
+                <span>Dashboard</span>
+            </button>
+
+            <button type="button" id="nav-record" onclick="switchPage('record')" 
+                class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/70 transition-all border-l-4 border-transparent">
+                <span class="text-base">📝</span>
+                <span>บันทึกปัญหาการผลิต</span>
+            </button>
+        </div>
+
+        <!-- ส่วนท้าย Sidebar -->
+        <div class="p-4 border-t border-slate-800 text-xs text-slate-500">
+            <div class="flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>พร้อมเชื่อมต่อ Google Sheet</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- พื้นที่ฝั่งขวาทั้งหมด -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+        <!-- Top Header Bar -->
+        <header class="bg-white border-b border-slate-200 px-4 lg:px-6 py-3 flex items-center justify-between sticky top-0 z-10 shadow-sm">
+            <div class="flex items-center gap-3">
+                <button type="button" onclick="toggleSidebar()" class="p-2 rounded-lg text-slate-600 hover:bg-slate-100 focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+                <h2 id="pageHeaderTitle" class="text-lg font-bold text-slate-800 tracking-wide flex items-center gap-2">
+                    📈 Dashboard
+                </h2>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <button type="button" onclick="switchPage('record')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-4 py-2 rounded-xl transition shadow-sm">
+                    + บันทึกปัญหาใหม่
+                </button>
+                <span class="hidden sm:inline-flex items-center gap-1.5 bg-pink-50 text-pink-600 border border-pink-200 px-3.5 py-1 rounded-full text-xs font-medium">
+                    💁‍♀️ PD Eng - Mena
+                </span>
+            </div>
+        </header>
+
+        <!-- พื้นที่เนื้อหาหลัก -->
+        <main class="flex-1 p-4 lg:p-6 max-w-7xl w-full mx-auto">
+
+            <!-- ========================================== -->
+            <!-- หน้าที่ 1: DASHBOARD                         -->
+            <!-- ========================================== -->
+            <div id="page-dashboard" class="space-y-6">
+
+                <!-- โซนที่ 1 (บนสุด): ข้อมูลสรุปโดยรวม (สะสมคงที่ ไม่เปลี่ยนตามการค้นหา) -->
+                <section class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-base font-bold text-blue-900 tracking-wide flex items-center gap-2">
+                            <span class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-sky-100 text-blue-600 text-sm">📌</span>
+                            <span>ข้อมูลสรุปโดยรวม</span>
+                            <span class="text-xs font-normal text-slate-500">(ข้อมูลสะสมทั้งหมด)</span>
+                        </h3>
+                        <span id="overallTotalBadge" class="text-xs bg-blue-600 text-white px-3.5 py-1 rounded-full font-semibold shadow-xs">
+                            สะสมทั้งหมด 0 รายการ
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+                        <!-- ฝั่งซ้าย: Summary Cards สะสม -->
+                        <div class="grid grid-cols-1 gap-4">
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-sky-100 hover:border-blue-200 transition flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-medium text-slate-500">ปัญหาที่พบมากที่สุด (สะสม)</p>
+                                    <h4 id="topDefectCard" class="text-2xl font-bold text-blue-700 mt-1 tracking-tight">-</h4>
+                                    <span id="topDefectCount" class="inline-block mt-2 text-xs font-semibold text-blue-700 bg-sky-50 border border-sky-100 px-2.5 py-0.5 rounded-full">
+                                        0 ครั้ง
+                                    </span>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-sky-50 border border-sky-100 text-blue-600 flex items-center justify-center text-xl shrink-0">
+                                    🚨
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-5 rounded-2xl shadow-sm border border-sky-100 hover:border-blue-200 transition flex items-center justify-between">
+                                <div>
+                                    <p class="text-xs font-medium text-slate-500">เครื่องที่พบปัญหามากที่สุด (สะสม)</p>
+                                    <h4 id="topMachineCard" class="text-2xl font-bold text-slate-800 mt-1 tracking-tight">-</h4>
+                                    <span id="topMachineCount" class="inline-block mt-2 text-xs font-semibold text-slate-700 bg-slate-100 border border-slate-200 px-2.5 py-0.5 rounded-full">
+                                        0 ครั้ง
+                                    </span>
+                                </div>
+                                <div class="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200 text-slate-700 flex items-center justify-center text-xl shrink-0">
+                                    🛠️
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ฝั่งขวา: กราฟโดนัทข้อมูลสะสมโดยรวม -->
+                        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                            <div class="flex items-center justify-between mb-2">
+                                <h4 class="text-sm font-bold text-slate-800 tracking-wide">สัดส่วนปัญหาสะสมตามหมวดหมู่</h4>
+                                <span class="text-[11px] text-slate-400">ข้อมูลสะสมทั้งหมด</span>
+                            </div>
+                            <div class="relative h-56 w-full flex items-center justify-center">
+                                <canvas id="overallDoughnutChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <hr class="border-slate-200">
+
+                <!-- โซนที่ 2: ช่องค้นหา + กราฟโดนัทเล็กสรุปจากผลการค้นหา -->
+                <section class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
+                    
+                    <!-- ฝั่งซ้าย (2 ส่วน): กล่องค้นหาแยกช่องตามเงื่อนไข -->
+                    <div class="lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                        <div>
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-2 border-b border-slate-100">
+                                <h3 class="text-sm font-bold text-slate-800 tracking-wide">🔍 ค้นหาข้อมูลปัญหา</h3>
+                                <button type="button" onclick="clearDashboardFilters()" class="text-xs text-slate-500 hover:text-blue-600 font-medium">
+                                    ล้างเงื่อนไข
+                                </button>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                                <!-- จากวันที่ -->
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">จากวันที่</label>
+                                    <input type="date" id="filterStartDate"
+                                        class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                                </div>
+
+                                <!-- ถึงวันที่ -->
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">ถึงวันที่</label>
+                                    <input type="date" id="filterEndDate"
+                                        class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                                </div>
+
+                                <!-- ช่องกรอก: รหัสงาน / ชื่องาน -->
+                                <div class="sm:col-span-2">
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">รหัสงาน / ชื่องาน</label>
+                                    <input type="text" id="filterJobKeyword"
+                                        placeholder="พิมพ์เลขใบสั่งผลิต (Lot), Code ECON หรือชื่อสินค้า..."
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault(); executeDashboardSearch();}"
+                                        class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                                </div>
+
+                                <!-- Dropdown: เลือก Process -->
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">Process</label>
+                                    <select id="filterProcess" onchange="handleProcessChange('filter')"
+                                        class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                                        <option value="">-- ทั้งหมด (ทุก Process) --</option>
+                                        <option value="Forge">Forge</option>
+                                        <option value="Tap">Tap</option>
+                                        <option value="Drill">Drill</option>
+                                        <option value="Lathe">Lathe</option>
+                                        <option value="Thread/Knurling">Thread/Knurling</option>
+                                        <option value="Press">Press</option>
+                                        <option value="Barrel">Barrel</option>
+                                    </select>
+                                </div>
+
+                                <!-- Dropdown: เลือกเครื่องจักร -->
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 mb-1">เครื่องจักร (Machine)</label>
+                                    <select id="filterMachine" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white">
+                                        <option value="">-- ทั้งหมด (ทุกเครื่องจักร) --</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ปุ่มกดค้นหาและสรุปสถานะ -->
+                        <div class="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                            <span id="filteredCountBadge" class="bg-sky-50 text-blue-700 border border-sky-100 px-3.5 py-1 rounded-full text-xs font-semibold">
+                                พบข้อมูล 0 รายการ
+                            </span>
+                            <button type="button" onclick="executeDashboardSearch()"
+                                class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-6 py-2 rounded-xl transition shadow-xs flex items-center gap-1.5">
+                                🔍 ค้นหา
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ฝั่งขวา (1 ส่วน): กราฟโดนัทเล็กสรุปข้อมูลจากการค้นหา -->
+                    <div class="lg:col-span-1 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                        <div class="mb-2">
+                            <h3 class="text-sm font-bold text-blue-900 tracking-wide">📊 ข้อมูลสรุปจากผลการค้นหา</h3>
+                            <p id="filteredTopHint" class="text-[11px] text-slate-500 mt-0.5">แยกตามหมวดหมู่ปัญหาที่ค้นพบ</p>
+                        </div>
+                        <div class="relative h-48 w-full flex items-center justify-center">
+                            <canvas id="filteredDoughnutChart"></canvas>
+                        </div>
+                    </div>
+
+                </section>
+
+                <!-- โซนที่ 3 (ด้านล่างสุดของ Dashboard): ตารางรายการที่ตรงกับผลการค้นหา + ปุ่ม Export Excel -->
+                <section class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 tracking-wide">📑 รายการผลการค้นหา</h3>
+                            <p class="text-xs text-slate-500 mt-0.5">คลิกที่รายการเพื่อดูรายละเอียดทั้งหมด แก้ไขข้อมูล หรือดูรูปภาพแนบ</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span id="searchResultTableCount" class="text-xs text-slate-500 font-medium">แสดง 0 รายการ</span>
+                            <button type="button" onclick="exportSearchResultsToExcel()"
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-xl transition shadow-xs flex items-center gap-1.5">
+                                📥 Export Excel
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                                    <th class="p-3 font-semibold whitespace-nowrap">วันที่</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">Process</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">เลขใบสั่งผลิต</th>
+                                    <th class="p-3 font-semibold min-w-[220px]">ชื่องาน</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">เครื่องจักร</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">หมวดหมู่ปัญหา</th>
+                                    <th class="p-3 font-semibold min-w-[180px]">ปัญหาที่พบ (ย่อ)</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">ผู้บันทึก</th>
+                                    <th class="p-3 font-semibold text-center whitespace-nowrap">รูปภาพ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="searchResultsTableBody" class="divide-y divide-slate-100 text-slate-700">
+                                <!-- รายการผลการค้นหาจะแสดงตรงนี้ -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+            </div>
+
+            <!-- ========================================== -->
+            <!-- หน้าที่ 2: ฟอร์มบันทึกปัญหา + ประวัติล่าสุด   -->
+            <!-- ========================================== -->
+            <div id="page-record" class="hidden space-y-6 max-w-4xl mx-auto">
+                
+                <!-- กล่องฟอร์มบันทึกข้อมูล -->
+                <div class="bg-white p-6 lg:p-8 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="pb-4 mb-6 border-b border-slate-100 flex items-center justify-between">
+                        <div>
+                            <h3 class="text-lg font-bold text-blue-900 tracking-wide">📝 แบบฟอร์มบันทึกปัญหาในการผลิต</h3>
+                            <p class="text-xs text-slate-500 mt-0.5">พิมพ์เลขใบสั่งผลิต / ลูกค้า / สินค้า เพื่อเลือกรายการและดึงข้อมูลอัตโนมัติ</p>
+                        </div>
+                        <button type="button" onclick="switchPage('dashboard')" class="text-xs text-slate-500 hover:text-blue-600">
+                            ← กลับหน้า Dashboard
+                        </button>
+                    </div>
+
+                    <form id="defectForm" onsubmit="handleFormSubmit(event)" class="space-y-5">
+                        
+                        <!-- ช่องกรอกเลขใบสั่งผลิต + รายการแนะนำแบบ Autocomplete -->
+                        <div id="lotAutocompleteWrapper" class="relative">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="block text-sm font-semibold text-slate-700">
+                                    📩 เลขใบสั่งผลิต <span class="text-red-500">*</span>
+                                </label>
+                                <div class="flex items-center gap-2">
+                                    <span id="orderSyncStatus" class="text-[11px] text-slate-400">กำลังโหลดฐานข้อมูล...</span>
+                                    <button type="button" onclick="loadOrderMasterList(true)" class="text-[11px] text-blue-600 hover:underline font-medium">
+                                        รีเฟรชใบสั่งผลิต
+                                    </button>
+                                </div>
+                            </div>
+
+                            <input type="text" id="lotNumber" required autocomplete="off"
+                                placeholder="พิมพ์เลขใบสั่ง / ลูกค้า / สินค้า" 
+                                class="w-full px-3.5 py-2.5 border-2 border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-600 focus:outline-none text-sm font-medium uppercase bg-white"
+                                oninput="handleLotInput(this.value)"
+                                onfocus="handleLotInput(this.value)"
+                                onkeydown="handleLotEnter(event)">
+
+                            <!-- กล่องรายการแนะนำเลื่อนเลือกได้ -->
+                            <div id="lotSuggestionsDropdown"
+                                class="hidden absolute left-0 right-0 mt-1.5 bg-white border border-sky-200 rounded-2xl shadow-xl max-h-80 overflow-y-auto z-40 divide-y divide-slate-100">
+                            </div>
+                        </div>
+
+                        <!-- ช่อง Autofill: ลูกค้า และ Code / ECON -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">ลูกค้า</label>
+                                <input type="text" id="displayCustomer" readonly 
+                                    class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-slate-100 text-slate-700 text-sm focus:outline-none cursor-not-allowed">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-1">Code / ECON</label>
+                                <input type="text" id="displayItemCode" readonly 
+                                    class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-slate-100 text-slate-700 text-sm focus:outline-none cursor-not-allowed">
+                            </div>
+                        </div>
+
+                        <!-- ช่อง Autofill: รายการสินค้า -->
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">รายการสินค้า</label>
+                            <input type="text" id="displayPartName" readonly 
+                                class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl bg-slate-100 text-slate-700 text-sm focus:outline-none cursor-not-allowed">
+                        </div>
+
+                        <!-- ช่องเลือก Process และ เครื่องจักร -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                    🏭 กระบวนการผลิต (Process) <span class="text-red-500">*</span>
+                                </label>
+                                <select id="processSelect" required onchange="handleProcessChange('record')"
+                                    class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-sm bg-white">
+                                    <option value="">-- เลือก Process --</option>
+                                    <option value="Forge">Forge</option>
+                                    <option value="Tap">Tap</option>
+                                    <option value="Drill">Drill</option>
+                                    <option value="Lathe">Lathe</option>
+                                    <option value="Thread/Knurling">Thread/Knurling</option>
+                                    <option value="Press">Press</option>
+                                    <option value="Barrel">Barrel</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1.5">
+                                    เครื่องจักร (Machine) <span class="text-red-500">*</span>
+                                </label>
+                                <select id="machineSelect" required class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none text-sm bg-white">
+                                    <option value="">-- เลือกเครื่องจักร --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- หมวดหมู่ปัญหา -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">
+                                🏷️ หมวดหมู่ปัญหา (Defect Type) <span class="text-red-500">*</span>
+                            </label>
+                            <select id="defectCategory" required class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm bg-white">
+                                <option value="">-- เลือกหมวดหมู่ปัญหา --</option>
+                                <option value="Appearance">Appearance (ผิวงาน / รูปลักษณ์)</option>
+                                <option value="Dimension">Dimension (ขนาดไม่ได้ตาม Spec)</option>
+                                <option value="Mould">Mould (แม่พิมพ์ / ดาย)</option>
+                                <option value="Punch">Punch (พั้นช์ / เข็มกระทุ้ง)</option>
+                            </select>
+                        </div>
+
+                        <!-- รายละเอียดปัญหา -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">
+                                รายละเอียดปัญหาที่พบ <span class="text-red-500">*</span>
+                            </label>
+                            <textarea id="defectDetail" rows="3" required placeholder="ระบุลักษณะปัญหาที่เกิดขึ้น..." 
+                                class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"></textarea>
+                        </div>
+
+                        <!-- วิธีการแก้ไข -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">
+                                วิธีการแก้ไข (Corrective Action) <span class="text-red-500">*</span>
+                            </label>
+                            <textarea id="correctiveAction" rows="3" required placeholder="ระบุวิธีแก้ไขปัญหาเฉพาะหน้าหรือการปรับตั้ง..." 
+                                class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm"></textarea>
+                        </div>
+
+                        <!-- ชื่อผู้บันทึก -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">
+                                👤 ชื่อผู้บันทึก <span class="text-red-500">*</span>
+                            </label>
+                            <input type="text" id="recorderName" required placeholder="ระบุชื่อผู้บันทึกข้อมูล..."
+                                class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none text-sm bg-white">
+                        </div>
+
+                        <!-- ช่องใส่รูปภาพแนบ -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-1">
+                                ⋆.📷˚ แนบรูปภาพประกอบ (ถ้ามี)
+                            </label>
+                            <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 bg-slate-50/70 hover:bg-slate-50 transition">
+                                <input type="file" id="defectImageInput" accept="image/*" onchange="handleImageUpload(event)"
+                                    class="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                                <p class="text-[11px] text-slate-400 mt-1.5">รองรับไฟล์ภาพ JPG, PNG (ระบบจะปรับขนาดอัตโนมัติเพื่อความรวดเร็วในการบันทึก)</p>
+                                
+                                <!-- กล่องแสดงตัวอย่างรูปภาพก่อนบันทึก -->
+                                <div id="imagePreviewContainer" class="hidden mt-3 relative inline-block">
+                                    <img id="imagePreview" src="" alt="Preview" class="max-h-44 rounded-lg border border-slate-200 shadow-xs object-contain bg-white">
+                                    <button type="button" onclick="removeAttachedImage()"
+                                        class="mt-2 block text-xs text-red-600 hover:underline font-medium">
+                                        ✕ ลบรูปภาพที่เลือก
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ปุ่มดำเนินการ -->
+                        <div class="pt-2 flex items-center gap-3">
+                            <button type="submit" id="submitBtn" class="flex-1 bg-blue-600 text-white font-semibold py-3 rounded-xl hover:bg-blue-700 transition shadow-sm text-sm">
+                                💾 บันทึกข้อมูลปัญหา
+                            </button>
+                            <button type="button" onclick="resetFormOnly()" class="px-5 py-3 border border-slate-300 text-slate-600 rounded-xl hover:bg-slate-50 transition text-sm font-medium">
+                                ล้างค่า
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+
+                <!-- กล่องประวัติการบันทึกปัญหาล่าสุด -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h3 class="text-base font-bold text-slate-800 tracking-wide">📋 ประวัติการบันทึกปัญหาล่าสุด</h3>
+                            <p class="text-xs text-slate-400">คลิกที่รายการเพื่อดูรายละเอียดเต็ม แก้ไขข้อมูล หรือดูรูปภาพแนบ</p>
+                        </div>
+                        <button type="button" onclick="loadHistoryFromSheet()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-xl transition font-medium">
+                            🔄 รีเฟรชข้อมูล
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                                    <th class="p-3 font-semibold whitespace-nowrap">วันที่</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">Process</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">เลขใบสั่งผลิต</th>
+                                    <th class="p-3 font-semibold min-w-[220px]">ชื่องาน</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">เครื่องจักร</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">หมวดหมู่ปัญหา</th>
+                                    <th class="p-3 font-semibold min-w-[180px]">รายละเอียด & วิธีแก้ไข</th>
+                                    <th class="p-3 font-semibold whitespace-nowrap">ผู้บันทึก</th>
+                                    <th class="p-3 font-semibold text-center whitespace-nowrap">รูปภาพ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logTableBody" class="divide-y divide-slate-100 text-slate-700">
+                                <!-- แถวข้อมูลจะถูกเติมอัตโนมัติ -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- POPUP MODAL: ดูรายละเอียด / แก้ไขข้อมูล      -->
+    <!-- ========================================== -->
+    <div id="detailModal" onclick="if(event.target===this) closeDetailModal()" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-slate-200">
+            
+            <!-- ส่วนหัว Popup -->
+            <div class="px-6 py-4 bg-blue-600 text-white flex items-center justify-between sticky top-0 z-10">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">📄</span>
+                    <h3 id="modalTitleText" class="text-base font-bold tracking-wide">รายละเอียดบันทึกปัญหาการผลิต</h3>
+                </div>
+                <button type="button" onclick="closeDetailModal()" class="text-white/80 hover:text-white text-xl font-bold px-2">
+                    ✕
+                </button>
+            </div>
+
+            <!-- โหมดดูรายละเอียด -->
+            <div id="modalViewMode" class="p-6 space-y-4 text-sm">
+                
+                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                        <p class="text-xs text-slate-500">วันที่บันทึก</p>
+                        <p id="modalDate" class="font-semibold text-slate-800 mt-0.5">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">Process</p>
+                        <p id="modalProcess" class="font-semibold text-blue-700 mt-0.5">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">เครื่องจักร (Machine)</p>
+                        <p id="modalMachine" class="font-semibold text-slate-800 mt-0.5">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">เลขใบสั่งผลิต (Lot)</p>
+                        <p id="modalLot" class="font-semibold text-slate-800 mt-0.5">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">Code / ECON</p>
+                        <p id="modalCodeEcon" class="font-semibold text-slate-800 mt-0.5">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">ลูกค้า</p>
+                        <p id="modalCustomer" class="font-semibold text-slate-800 mt-0.5">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500">ผู้บันทึก</p>
+                        <p id="modalRecorder" class="font-semibold text-slate-800 mt-0.5">-</p>
+                    </div>
+                    <div class="col-span-2 sm:col-span-2 pt-1 sm:pt-0 sm:border-t-0 border-t border-slate-200">
+                        <p class="text-xs text-slate-500">รายการสินค้า</p>
+                        <p id="modalPartName" class="font-semibold text-slate-800 mt-0.5">-</p>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold text-slate-500 mb-1">หมวดหมู่ปัญหา</p>
+                    <span id="modalCategory" class="inline-block bg-sky-50 text-blue-700 border border-sky-200 px-3 py-1 rounded-full text-xs font-bold">-</span>
+                </div>
+
+                <div class="bg-rose-50/50 border border-rose-100 p-4 rounded-xl">
+                    <p class="text-xs font-bold text-slate-700 mb-1">⚠️ รายละเอียดปัญหาที่พบ</p>
+                    <p id="modalDetail" class="text-slate-700 whitespace-pre-line leading-relaxed">-</p>
+                </div>
+
+                <div class="bg-sky-50/60 border border-sky-100 p-4 rounded-xl">
+                    <p class="text-xs font-bold text-blue-900 mb-1">🛠️ วิธีการแก้ไข (Corrective Action)</p>
+                    <p id="modalAction" class="text-slate-700 whitespace-pre-line leading-relaxed">-</p>
+                </div>
+
+                <!-- ส่วนแสดงรูปภาพใน Popup -->
+                <div id="modalImageSection" class="hidden">
+                    <p class="text-xs font-bold text-slate-700 mb-2">📷 รูปภาพประกอบ</p>
+                    <div class="border border-slate-200 rounded-xl p-2 bg-slate-50 flex justify-center">
+                        <img id="modalImage" src="" alt="รูปภาพปัญหาการผลิต" class="max-h-80 rounded-lg object-contain">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- โหมดแก้ไขข้อมูล -->
+            <form id="modalEditMode" onsubmit="saveEditedLog(event)" class="hidden p-6 space-y-4 text-sm">
+                <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs text-slate-600 flex flex-wrap gap-x-5 gap-y-1">
+                    <span><strong>เลขใบสั่งผลิต:</strong> <span id="editSummaryLot">-</span></span>
+                    <span><strong>ลูกค้า:</strong> <span id="editSummaryCustomer">-</span></span>
+                    <span class="w-full"><strong>สินค้า:</strong> <span id="editSummaryPart">-</span></span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Process <span class="text-red-500">*</span></label>
+                        <select id="editProcessSelect" required onchange="handleEditProcessChange()"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="">-- เลือก Process --</option>
+                            <option value="Forge">Forge</option>
+                            <option value="Tap">Tap</option>
+                            <option value="Drill">Drill</option>
+                            <option value="Lathe">Lathe</option>
+                            <option value="Thread/Knurling">Thread/Knurling</option>
+                            <option value="Press">Press</option>
+                            <option value="Barrel">Barrel</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">เครื่องจักร (Machine) <span class="text-red-500">*</span></label>
+                        <select id="editMachineSelect" required
+                            class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="">-- เลือกเครื่องจักร --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">หมวดหมู่ปัญหา <span class="text-red-500">*</span></label>
+                        <select id="editDefectCategory" required
+                            class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            <option value="">-- เลือกหมวดหมู่ปัญหา --</option>
+                            <option value="Appearance">Appearance (ผิวงาน / รูปลักษณ์)</option>
+                            <option value="Dimension">Dimension (ขนาดไม่ได้ตาม Spec)</option>
+                            <option value="Mould">Mould (แม่พิมพ์ / ดาย)</option>
+                            <option value="Punch">Punch (พั้นช์ / เข็มกระทุ้ง)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อผู้บันทึก <span class="text-red-500">*</span></label>
+                        <input type="text" id="editRecorderName" required
+                            class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">รายละเอียดปัญหาที่พบ <span class="text-red-500">*</span></label>
+                    <textarea id="editDefectDetail" rows="3" required
+                        class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">วิธีการแก้ไข <span class="text-red-500">*</span></label>
+                    <textarea id="editCorrectiveAction" rows="3" required
+                        class="w-full px-3 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">เปลี่ยนรูปภาพประกอบ (ถ้าต้องการ)</label>
+                    <input type="file" id="editImageInput" accept="image/*" onchange="handleEditImageUpload(event)"
+                        class="block w-full text-xs text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                    <div id="editImagePreviewWrap" class="hidden mt-2">
+                        <img id="editImagePreview" src="" alt="Edit Preview" class="max-h-40 rounded-lg border border-slate-200 object-contain bg-white">
+                    </div>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2">
+                    <button type="button" onclick="cancelEditMode()"
+                        class="px-4 py-2 border border-slate-300 text-slate-600 rounded-xl hover:bg-slate-50 text-xs font-semibold">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" id="saveEditBtn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-xl text-xs font-semibold shadow-xs">
+                        💾 บันทึกการแก้ไข
+                    </button>
+                </div>
+            </form>
+
+            <!-- ส่วนท้าย Popup (โหมดดูรายละเอียด) -->
+            <div id="modalViewFooter" class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+                <button type="button" onclick="enterEditMode()"
+                    class="bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold px-4 py-2 rounded-xl transition flex items-center gap-1.5">
+                    ✏️ แก้ไขข้อมูล
+                </button>
+                <button type="button" onclick="closeDetailModal()"
+                    class="bg-slate-700 hover:bg-slate-800 text-white text-xs font-semibold px-5 py-2 rounded-xl transition">
+                    ปิดหน้าต่าง
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 👉 URL ที่ได้จากการ Deploy Google Apps Script
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbw2xdfg4JsszUxE0M7ijsCcVTOmjfp1ufgVkRG2KBMxI9OtOtYCeETXr_YZ_nUV2N6spQ/exec";
+
+        // แบ่งกลุ่มเครื่องจักรตาม Process
+        const MACHINES_BY_PROCESS = {
+            "Forge": [
+                "1207", "11B/1", "11B/3", "11B/5", "14B/1", "14B/3", "14B/4", "14B/6", "14B/8",
+                "17B/2", "17B/3", "17B/4", "17B/5", "19B/2", "22B", "24B", "83L", "135L",
+                "HH84", "2415", "2420", "2425", "RV02", "SM01", "SM04"
+            ],
+            "Tap": [
+                "LA01", "LA02", "LA03", "LA04", "LA14", "LA15", "LA16", "LA17", "LA18", "LA19",
+                "LA20", "LA21", "TH02", "TH03", "TH04", "TH06", "TH07", "TH08", "TAT03", "TAT04", "TAT05"
+            ],
+            "Drill": [
+                "LA01", "LA02", "LA14", "LA15", "LA16", "LA17", "LA18", "LA19", "LA20", "LA21",
+                "TH02", "TH03", "TH04", "TH06", "TH07", "TH08"
+            ],
+            "Lathe": [
+                "LA01", "LA02", "LA09", "LA10", "LA11", "LA12", "LA14", "LA15", "LA16", "LA17",
+                "LA18", "LA19", "LA20", "LA21", "MS03", "MS04", "MS05", "MS06", "MS07", "MS08"
+            ],
+            "Thread/Knurling": [
+                "MI05", "MI06", "MI07", "MI08", "MI13", "MI14", "MI15", "MR01", "MR02"
+            ],
+            "Press": [
+                "MSH01"
+            ],
+            "Barrel": [
+                "BR01", "BR02", "BR03", "BR04", "DR01", "DR02", "HT01", "HT02"
+            ]
+        };
+
+        let orderMasterList = [];
+        let currentMatchedSuggestions = [];
+        let currentProductData = {};
+        let currentAttachedImageBase64 = "";
+        let activeModalLog = null;
+        let editNewImageBase64 = "";
+        let overallChartInstance = null;
+        let filteredChartInstance = null;
+
+        // ข้อมูลประวัติการบันทึกปัญหา (ดึงจริงจาก Google Sheet)
+        let defectLogs = [];
+
+        window.onload = function() {
+            handleProcessChange("record");
+            handleProcessChange("filter");
+            renderAllDashboardSections();
+            renderRecordHistoryTable(defectLogs);
+
+            document.addEventListener("click", function(e) {
+                const wrapper = document.getElementById("lotAutocompleteWrapper");
+                if (wrapper && !wrapper.contains(e.target)) {
+                    hideLotSuggestions();
+                }
+            });
+
+            if (GAS_URL !== "YOUR_GAS_WEB_APP_URL") {
+                loadOrderMasterList(false);
+                loadHistoryFromSheet();
+            } else {
+                document.getElementById("orderSyncStatus").innerText = "โหมดทดสอบ";
+            }
+        };
+
+        async function loadOrderMasterList(forceRefresh) {
+            const statusEl = document.getElementById("orderSyncStatus");
+            if (GAS_URL === "YOUR_GAS_WEB_APP_URL") return;
+
+            statusEl.innerText = "กำลังโหลดใบสั่งผลิต...";
+            try {
+                const url = `${GAS_URL}?action=orders${forceRefresh ? "&refresh=1" : ""}`;
+                const res = await fetch(url);
+                const list = await res.json();
+                if (Array.isArray(list)) {
+                    orderMasterList = list;
+                    statusEl.innerText = `พร้อม (${list.length} รายการ)`;
+                } else {
+                    statusEl.innerText = "พร้อมค้นหา";
+                }
+            } catch (err) {
+                console.error("Error loading order master:", err);
+                statusEl.innerText = "ค้นหาโดยตรงจากชีต";
+            }
+        }
+
+        function handleLotInput(val) {
+            const query = String(val || "").trim().toLowerCase();
+            currentProductData = {};
+
+            if (!query) {
+                document.getElementById("displayCustomer").value = "";
+                document.getElementById("displayItemCode").value = "";
+                document.getElementById("displayPartName").value = "";
+                hideLotSuggestions();
+                return;
+            }
+
+            if (orderMasterList.length > 0) {
+                const matches = orderMasterList.filter(item => {
+                    const hay = `${item.lot || ""} ${item.codeEcon || ""} ${item.partName || ""} ${item.customer || ""}`.toLowerCase();
+                    return hay.includes(query);
+                });
+                currentMatchedSuggestions = matches.slice(0, 40);
+                renderLotSuggestions(currentMatchedSuggestions);
+            }
+        }
+
+        // แสดงเฉพาะ เลขที่ใบสั่งผลิต | ชื่องาน | ชื่อลูกค้า ในบรรทัดเดียวกัน
+        function renderLotSuggestions(matches) {
+            const dropdown = document.getElementById("lotSuggestionsDropdown");
+            if (!dropdown) return;
+
+            if (!matches || matches.length === 0) {
+                dropdown.innerHTML = `
+                    <div class="p-4 text-xs text-slate-400 text-center">
+                        ไม่พบใบสั่งผลิตที่ตรงกับคำค้นหา (กด Enter เพื่อค้นหาในชีตโดยตรง)
+                    </div>
+                `;
+                dropdown.classList.remove("hidden");
+                return;
+            }
+
+            dropdown.innerHTML = "";
+            matches.forEach((item, idx) => {
+                const row = document.createElement("button");
+                row.type = "button";
+                row.className = "w-full text-left px-4 py-3 hover:bg-sky-50/80 transition flex items-center gap-2 min-w-0 focus:bg-sky-50 focus:outline-none";
+                row.onclick = () => selectOrderSuggestion(idx);
+
+                row.innerHTML = `
+                    <span class="font-bold text-blue-700 text-sm shrink-0">${escapeHtml(item.lot)}</span>
+                    <span class="text-xs text-slate-700 font-medium truncate">${escapeHtml(item.partName || "-")}</span>
+                    <span class="text-slate-300 text-xs shrink-0">|</span>
+                    <span class="text-xs text-slate-700 font-medium shrink-0">${escapeHtml(item.customer || "-")}</span>
+                `;
+                dropdown.appendChild(row);
+            });
+
+            dropdown.classList.remove("hidden");
+        }
+
+        function hideLotSuggestions() {
+            const dropdown = document.getElementById("lotSuggestionsDropdown");
+            if (dropdown) dropdown.classList.add("hidden");
+        }
+
+        function selectOrderSuggestion(index) {
+            const item = currentMatchedSuggestions[index];
+            if (!item) return;
+
+            document.getElementById("lotNumber").value = item.lot || "";
+            currentProductData = {
+                lot: item.lot || "",
+                customer: item.customer || "-",
+                codeEcon: item.codeEcon || "-",
+                partName: item.partName || "-"
+            };
+
+            document.getElementById("displayCustomer").value = currentProductData.customer;
+            document.getElementById("displayItemCode").value = currentProductData.codeEcon;
+            document.getElementById("displayPartName").value = currentProductData.partName;
+
+            hideLotSuggestions();
+        }
+
+        function escapeHtml(str) {
+            return String(str || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
+        function populateMachineSelect(selectEl, processName, defaultLabel) {
+            if (!selectEl) return;
+            const prevValue = selectEl.value;
+            selectEl.innerHTML = `<option value="">${defaultLabel}</option>`;
+
+            const allMachines = [...new Set(Object.values(MACHINES_BY_PROCESS).flat())];
+            const list = processName && MACHINES_BY_PROCESS[processName]
+                ? MACHINES_BY_PROCESS[processName]
+                : allMachines;
+
+            list.forEach(machine => {
+                const opt = document.createElement("option");
+                opt.value = machine;
+                opt.textContent = machine;
+                selectEl.appendChild(opt);
+            });
+
+            if (list.includes(prevValue)) {
+                selectEl.value = prevValue;
+            }
+        }
+
+        function handleProcessChange(sourceType) {
+            if (sourceType === "record") {
+                const proc = document.getElementById("processSelect")?.value || "";
+                populateMachineSelect(document.getElementById("machineSelect"), proc, "-- เลือกเครื่องจักร --");
+            } else if (sourceType === "filter") {
+                const proc = document.getElementById("filterProcess")?.value || "";
+                populateMachineSelect(document.getElementById("filterMachine"), proc, "-- ทั้งหมด (ทุกเครื่องจักร) --");
+            }
+        }
+
+        function formatDateToDMY(dateObj) {
+            const day = String(dateObj.getDate()).padStart(2, "0");
+            const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+            const year = dateObj.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        function parseDateToISO(dateStr) {
+            if (!dateStr) return "";
+            const datePart = String(dateStr).trim().split(" ")[0];
+            const parts = datePart.split("/");
+            if (parts.length === 3) {
+                const day = parts[0].padStart(2, "0");
+                const month = parts[1].padStart(2, "0");
+                const year = parts[2].length === 2 ? "20" + parts[2] : parts[2];
+                return `${year}-${month}-${day}`;
+            }
+            return "";
+        }
+
+        function formatDateToISO(dateObj) {
+            const year = dateObj.getFullYear();
+            const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+            const day = String(dateObj.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        }
+
+        function switchPage(pageName) {
+            const pageDashboard = document.getElementById('page-dashboard');
+            const pageRecord = document.getElementById('page-record');
+            const navDashboard = document.getElementById('nav-dashboard');
+            const navRecord = document.getElementById('nav-record');
+            const headerTitle = document.getElementById('pageHeaderTitle');
+
+            const activeClass = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all bg-gradient-to-r from-blue-600/30 to-indigo-600/20 text-white border-l-4 border-blue-500";
+            const inactiveClass = "w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800/70 transition-all border-l-4 border-transparent";
+
+            if (pageName === 'dashboard') {
+                pageDashboard.classList.remove('hidden');
+                pageRecord.classList.add('hidden');
+                navDashboard.className = activeClass;
+                navRecord.className = inactiveClass;
+                headerTitle.innerHTML = "📈 Dashboard";
+                renderAllDashboardSections();
+            } else {
+                pageDashboard.classList.add('hidden');
+                pageRecord.classList.remove('hidden');
+                navDashboard.className = inactiveClass;
+                navRecord.className = activeClass;
+                headerTitle.innerHTML = "📝 บันทึกปัญหาการผลิต";
+                renderRecordHistoryTable(defectLogs);
+            }
+
+            if (window.innerWidth < 1024) {
+                document.getElementById('sidebar').classList.add('-translate-x-full');
+                document.getElementById('sidebarBackdrop').classList.add('hidden');
+            }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            if (window.innerWidth < 1024) {
+                sidebar.classList.toggle('-translate-x-full');
+                backdrop.classList.toggle('hidden');
+            } else {
+                sidebar.classList.toggle('hidden');
+            }
+        }
+
+        function compressImageFile(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const maxDim = 600;
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height && width > maxDim) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else if (height > maxDim) {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    callback(canvas.toDataURL('image/jpeg', 0.7));
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                removeAttachedImage();
+                return;
+            }
+            compressImageFile(file, function(base64Str) {
+                currentAttachedImageBase64 = base64Str;
+                document.getElementById('imagePreview').src = currentAttachedImageBase64;
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+            });
+        }
+
+        function removeAttachedImage() {
+            currentAttachedImageBase64 = "";
+            const input = document.getElementById('defectImageInput');
+            if (input) input.value = "";
+            document.getElementById('imagePreview').src = "";
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+        }
+
+        async function handleLotEnter(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                hideLotSuggestions();
+                await lookupLotData(event.target.value);
+                const nextField = document.getElementById('processSelect');
+                if (nextField) nextField.focus();
+            }
+        }
+
+        async function lookupLotData(lotVal) {
+            const cleanLot = lotVal.trim().toUpperCase();
+            const customerInput = document.getElementById('displayCustomer');
+            const codeInput = document.getElementById('displayItemCode');
+            const partInput = document.getElementById('displayPartName');
+
+            if (!cleanLot) {
+                customerInput.value = "";
+                codeInput.value = "";
+                partInput.value = "";
+                currentProductData = {};
+                return;
+            }
+
+            const localMatch = orderMasterList.find(item => String(item.lot || "").trim().toUpperCase() === cleanLot);
+            if (localMatch) {
+                currentProductData = localMatch;
+                customerInput.value = localMatch.customer || "-";
+                codeInput.value = localMatch.codeEcon || "-";
+                partInput.value = localMatch.partName || "-";
+                return;
+            }
+
+            customerInput.value = "กำลังค้นหา...";
+            codeInput.value = "...";
+            partInput.value = "กำลังดึงข้อมูลสินค้า...";
+
+            if (GAS_URL === "YOUR_GAS_WEB_APP_URL") {
+                currentProductData = {
+                    customer: "ลูกค้าตัวอย่าง",
+                    codeEcon: "ECON-" + cleanLot,
+                    partName: "Rivet / Part (" + cleanLot + ")"
+                };
+                customerInput.value = currentProductData.customer;
+                codeInput.value = currentProductData.codeEcon;
+                partInput.value = currentProductData.partName;
+                return;
+            }
+
+            try {
+                const response = await fetch(`${GAS_URL}?action=lookup&lot=${encodeURIComponent(cleanLot)}`);
+                const data = await response.json();
+
+                if (data.found) {
+                    currentProductData = data;
+                    customerInput.value = data.customer || "-";
+                    codeInput.value = data.codeEcon || "-";
+                    partInput.value = data.partName || "-";
+                } else {
+                    currentProductData = {};
+                    customerInput.value = "";
+                    codeInput.value = "";
+                    partInput.value = "";
+                    alert("ไม่พบเลขใบสั่งผลิตนี้ในฐานข้อมูล");
+                }
+            } catch (error) {
+                console.error("Error looking up lot:", error);
+                customerInput.value = "";
+                codeInput.value = "";
+                partInput.value = "";
+            }
+        }
+
+        async function loadHistoryFromSheet() {
+            if (GAS_URL === "YOUR_GAS_WEB_APP_URL") return;
+            try {
+                const response = await fetch(`${GAS_URL}?action=history`);
+                const data = await response.json();
+                if (Array.isArray(data)) {
+                    defectLogs = data.map(item => ({
+                        ...item,
+                        date: item.date || item.time || "",
+                        isoDate: item.isoDate || parseDateToISO(item.date || item.time),
+                        recorder: item.recorder || "-"
+                    }));
+                    renderAllDashboardSections();
+                    renderRecordHistoryTable(defectLogs);
+                }
+            } catch (error) {
+                console.error("Error loading history:", error);
+            }
+        }
+
+        async function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const processVal = document.getElementById('processSelect').value;
+            const lot = document.getElementById('lotNumber').value.trim().toUpperCase();
+            const machine = document.getElementById('machineSelect').value;
+            const category = document.getElementById('defectCategory').value;
+            const detail = document.getElementById('defectDetail').value.trim();
+            const action = document.getElementById('correctiveAction').value.trim();
+            const recorder = document.getElementById('recorderName').value.trim();
+
+            if (!currentProductData.partName && GAS_URL !== "YOUR_GAS_WEB_APP_URL") {
+                await lookupLotData(lot);
+                if (!currentProductData.partName) {
+                    alert("กรุณาเลือกรายการหรือค้นหาเลขใบสั่งผลิตให้พบข้อมูลสินค้าก่อนบันทึก");
+                    return;
+                }
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerText = "กำลังบันทึกข้อมูล...";
+
+            const now = new Date();
+            const isoDate = formatDateToISO(now);
+            const dateOnlyStr = formatDateToDMY(now);
+
+            const payload = {
+                actionType: "create",
+                isoDate: isoDate,
+                date: dateOnlyStr,
+                process: processVal,
+                lot: lot,
+                codeEcon: currentProductData.codeEcon || "-",
+                partName: currentProductData.partName || "ไม่ระบุชื่อสินค้า",
+                customer: currentProductData.customer || "-",
+                machine: machine,
+                category: category,
+                detail: detail,
+                action: action,
+                recorder: recorder || "-",
+                image: currentAttachedImageBase64
+            };
+
+            if (GAS_URL === "YOUR_GAS_WEB_APP_URL") {
+                defectLogs.unshift(payload);
+                resetFormState(submitBtn);
+                renderRecordHistoryTable(defectLogs);
+                renderAllDashboardSections();
+                alert("บันทึกข้อมูลในโหมดทดสอบสำเร็จ!");
+                return;
+            }
+
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    resetFormState(submitBtn);
+                    await loadHistoryFromSheet();
+                    alert("บันทึกข้อมูลลง Google Sheet สำเร็จ!");
+                } else {
+                    alert("เกิดข้อผิดพลาด: " + result.message);
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = "💾 บันทึกข้อมูลปัญหา";
+                }
+            } catch (error) {
+                alert("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: " + error);
+                submitBtn.disabled = false;
+                submitBtn.innerText = "💾 บันทึกข้อมูลปัญหา";
+            }
+        }
+
+        function resetFormOnly() {
+            document.getElementById('defectForm').reset();
+            document.getElementById('displayCustomer').value = "";
+            document.getElementById('displayItemCode').value = "";
+            document.getElementById('displayPartName').value = "";
+            hideLotSuggestions();
+            removeAttachedImage();
+            currentProductData = {};
+            handleProcessChange("record");
+        }
+
+        function resetFormState(btn) {
+            resetFormOnly();
+            btn.disabled = false;
+            btn.innerText = "💾 บันทึกข้อมูลปัญหา";
+        }
+
+        function renderAllDashboardSections() {
+            updateOverallSummaryAndChart(defectLogs);
+            executeDashboardSearch();
+        }
+
+        function updateOverallSummaryAndChart(allLogs) {
+            const categoryCounts = {};
+            const machineCounts = {};
+
+            allLogs.forEach(item => {
+                const cat = item.category || "ไม่ระบุ";
+                const mach = item.machine || "ไม่ระบุ";
+                categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+                machineCounts[mach] = (machineCounts[mach] || 0) + 1;
+            });
+
+            document.getElementById("overallTotalBadge").innerText = `สะสมทั้งหมด ${allLogs.length} รายการ`;
+
+            const topCatEntry = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0];
+            document.getElementById("topDefectCard").innerText = topCatEntry ? topCatEntry[0] : "-";
+            document.getElementById("topDefectCount").innerText = topCatEntry ? `${topCatEntry[1]} ครั้ง` : "0 ครั้ง";
+
+            const topMachEntry = Object.entries(machineCounts).sort((a, b) => b[1] - a[1])[0];
+            document.getElementById("topMachineCard").innerText = topMachEntry ? topMachEntry[0] : "-";
+            document.getElementById("topMachineCount").innerText = topMachEntry ? `${topMachEntry[1]} ครั้ง` : "0 ครั้ง";
+
+            const labels = Object.keys(categoryCounts);
+            const values = Object.values(categoryCounts);
+            const ctx = document.getElementById("overallDoughnutChart").getContext("2d");
+
+            if (overallChartInstance) {
+                overallChartInstance.destroy();
+            }
+
+            overallChartInstance = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: labels.length ? labels : ["ยังไม่มีข้อมูล"],
+                    datasets: [{
+                        data: values.length ? values : [1],
+                        backgroundColor: ["#2563EB", "#38BDF8", "#64748B", "#93C5FD", "#CBD5E1"],
+                        borderWidth: 2,
+                        borderColor: "#FFFFFF"
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: "62%",
+                    plugins: {
+                        legend: {
+                            position: "right",
+                            labels: { boxWidth: 12, padding: 14, font: { family: "Sarabun", size: 12 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function getFilteredLogs() {
+            const startDate = document.getElementById('filterStartDate')?.value || "";
+            const endDate = document.getElementById('filterEndDate')?.value || "";
+            const jobKeyword = (document.getElementById('filterJobKeyword')?.value || "").trim().toLowerCase();
+            const processFilter = document.getElementById('filterProcess')?.value || "";
+            const machineFilter = document.getElementById('filterMachine')?.value || "";
+
+            return defectLogs.filter(item => {
+                const itemDate = item.isoDate || parseDateToISO(item.date || item.time);
+
+                if (startDate && itemDate && itemDate < startDate) return false;
+                if (endDate && itemDate && itemDate > endDate) return false;
+
+                if (processFilter && (item.process || "") !== processFilter) return false;
+                if (machineFilter && (item.machine || "") !== machineFilter) return false;
+
+                if (jobKeyword) {
+                    const hay = `${item.lot || ""} ${item.codeEcon || ""} ${item.partName || ""} ${item.customer || ""} ${item.recorder || ""}`.toLowerCase();
+                    if (!hay.includes(jobKeyword)) return false;
+                }
+
+                return true;
+            });
+        }
+
+        function clearDashboardFilters() {
+            document.getElementById('filterStartDate').value = "";
+            document.getElementById('filterEndDate').value = "";
+            document.getElementById('filterJobKeyword').value = "";
+            document.getElementById('filterProcess').value = "";
+            handleProcessChange("filter");
+            document.getElementById('filterMachine').value = "";
+            executeDashboardSearch();
+        }
+
+        function executeDashboardSearch() {
+            const filteredLogs = getFilteredLogs();
+
+            document.getElementById("filteredCountBadge").innerText = `พบข้อมูล ${filteredLogs.length} รายการ`;
+            document.getElementById("searchResultTableCount").innerText = `แสดง ${filteredLogs.length} รายการ`;
+
+            const categoryCounts = {};
+            filteredLogs.forEach(item => {
+                const cat = item.category || "ไม่ระบุ";
+                categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
+            });
+
+            const topEntry = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1])[0];
+            document.getElementById("filteredTopHint").innerText = topEntry
+                ? `พบมากสุด: ${topEntry[0]} (${topEntry[1]} ครั้ง)`
+                : "ไม่พบรายการตามเงื่อนไขที่ค้นหา";
+
+            const labels = Object.keys(categoryCounts);
+            const values = Object.values(categoryCounts);
+            const ctx = document.getElementById("filteredDoughnutChart").getContext("2d");
+
+            if (filteredChartInstance) {
+                filteredChartInstance.destroy();
+            }
+
+            filteredChartInstance = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: labels.length ? labels : ["ไม่พบข้อมูล"],
+                    datasets: [{
+                        data: values.length ? values : [1],
+                        backgroundColor: labels.length
+                            ? ["#0284C7", "#38BDF8", "#64748B", "#93C5FD", "#CBD5E1"]
+                            : ["#E2E8F0"],
+                        borderWidth: 2,
+                        borderColor: "#FFFFFF"
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: "58%",
+                    plugins: {
+                        legend: {
+                            position: "bottom",
+                            labels: { boxWidth: 10, padding: 8, font: { family: "Sarabun", size: 11 } }
+                        }
+                    }
+                }
+            });
+
+            renderSearchResultsTable(filteredLogs);
+        }
+
+        function exportSearchResultsToExcel() {
+            const filteredLogs = getFilteredLogs();
+
+            if (!filteredLogs || filteredLogs.length === 0) {
+                alert("ไม่พบข้อมูลตามเงื่อนไขการค้นหาสำหรับ Export เป็นไฟล์ Excel");
+                return;
+            }
+
+            const rowsForExcel = filteredLogs.map((item, index) => ({
+                "ลำดับ": index + 1,
+                "วันที่": item.date || "-",
+                "Process": item.process || "-",
+                "เลขใบสั่งผลิต (Lot)": item.lot || "-",
+                "Code / ECON": item.codeEcon || "-",
+                "ลูกค้า": item.customer || "-",
+                "ชื่องาน / รายการสินค้า": item.partName || "-",
+                "เครื่องจักร (Machine)": item.machine || "-",
+                "หมวดหมู่ปัญหา": item.category || "-",
+                "รายละเอียดปัญหา": item.detail || "-",
+                "วิธีการแก้ไข": item.action || "-",
+                "ผู้บันทึก": item.recorder || "-",
+                "แนบรูปภาพ": item.image ? "มีรูปภาพ" : "ไม่มี"
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(rowsForExcel);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "ผลการค้นหาปัญหา");
+
+            worksheet["!cols"] = [
+                { wch: 8 },
+                { wch: 14 },
+                { wch: 16 },
+                { wch: 18 },
+                { wch: 16 },
+                { wch: 22 },
+                { wch: 26 },
+                { wch: 16 },
+                { wch: 18 },
+                { wch: 36 },
+                { wch: 36 },
+                { wch: 18 },
+                { wch: 12 }
+            ];
+
+            const todayISO = formatDateToISO(new Date());
+            const fileName = `Forge_Defect_Search_${todayISO}.xlsx`;
+
+            XLSX.writeFile(workbook, fileName);
+        }
+
+        function renderSearchResultsTable(logs) {
+            const tbody = document.getElementById("searchResultsTableBody");
+            if (!tbody) return;
+            tbody.innerHTML = "";
+
+            if (logs.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="p-8 text-center text-slate-400 text-sm">
+                            ไม่พบรายการที่ตรงกับเงื่อนไขการค้นหา
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            logs.forEach(log => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-sky-50/70 transition cursor-pointer";
+                tr.onclick = () => openDetailModal(log);
+                tr.innerHTML = `
+                    <td class="p-3 text-slate-500 text-xs whitespace-nowrap">${escapeHtml(log.date || "-")}</td>
+                    <td class="p-3">
+                        <span class="bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-0.5 rounded-full text-xs font-semibold">${escapeHtml(log.process || "-")}</span>
+                    </td>
+                    <td class="p-3 whitespace-nowrap">
+                        <div class="font-semibold text-slate-800">${escapeHtml(log.lot || "-")}</div>
+                        <div class="text-xs text-slate-400">${escapeHtml(log.codeEcon || "-")}</div>
+                    </td>
+                    <td class="p-3 text-xs font-medium text-slate-700">${escapeHtml(log.partName || "-")}</td>
+                    <td class="p-3">
+                        <span class="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full text-xs font-semibold">${escapeHtml(log.machine || "-")}</span>
+                    </td>
+                    <td class="p-3">
+                        <span class="bg-sky-50 text-blue-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-sky-100">${escapeHtml(log.category || "-")}</span>
+                    </td>
+                    <td class="p-3 text-xs text-slate-600 max-w-xs truncate">${escapeHtml(log.detail || "-")}</td>
+                    <td class="p-3 text-xs text-slate-700 whitespace-nowrap">${escapeHtml(log.recorder || "-")}</td>
+                    <td class="p-3 text-center text-xs">
+                        ${log.image ? '<span class="text-blue-600 font-semibold">📷 มีรูป</span>' : '<span class="text-slate-300">-</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderRecordHistoryTable(logs) {
+            const tbody = document.getElementById("logTableBody");
+            if (!tbody) return;
+            tbody.innerHTML = "";
+
+            logs.forEach(log => {
+                const tr = document.createElement("tr");
+                tr.className = "hover:bg-sky-50/70 transition cursor-pointer";
+                tr.onclick = () => openDetailModal(log);
+                tr.innerHTML = `
+                    <td class="p-3 text-slate-500 text-xs whitespace-nowrap">${escapeHtml(log.date || "-")}</td>
+                    <td class="p-3">
+                        <span class="bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-0.5 rounded-full text-xs font-semibold">${escapeHtml(log.process || "-")}</span>
+                    </td>
+                    <td class="p-3 whitespace-nowrap font-semibold text-slate-800">${escapeHtml(log.lot || "-")}</td>
+                    <td class="p-3 text-xs font-medium text-slate-700">${escapeHtml(log.partName || "-")}</td>
+                    <td class="p-3">
+                        <span class="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full text-xs font-semibold">${escapeHtml(log.machine || "-")}</span>
+                    </td>
+                    <td class="p-3">
+                        <span class="bg-sky-50 text-blue-700 px-2.5 py-0.5 rounded-full text-xs font-medium border border-sky-100">${escapeHtml(log.category || "-")}</span>
+                    </td>
+                    <td class="p-3 text-xs text-slate-600">
+                        <div><span class="font-semibold text-slate-700">ปัญหา:</span> ${escapeHtml(log.detail || "-")}</div>
+                        <div class="text-blue-700 mt-0.5"><span class="font-semibold">แก้ไข:</span> ${escapeHtml(log.action || "-")}</div>
+                    </td>
+                    <td class="p-3 text-xs text-slate-700 whitespace-nowrap">${escapeHtml(log.recorder || "-")}</td>
+                    <td class="p-3 text-center text-xs">
+                        ${log.image ? '<span class="text-blue-600 font-semibold">📷 ดูรูป</span>' : '<span class="text-slate-300">-</span>'}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ==========================================
+        // Popup Modal: ดูรายละเอียด & แก้ไขข้อมูล
+        // ==========================================
+        function openDetailModal(log) {
+            activeModalLog = log;
+            editNewImageBase64 = "";
+
+            document.getElementById('modalDate').innerText = log.date || "-";
+            document.getElementById('modalProcess').innerText = log.process || "-";
+            document.getElementById('modalMachine').innerText = log.machine || "-";
+            document.getElementById('modalLot').innerText = log.lot || "-";
+            document.getElementById('modalCodeEcon').innerText = log.codeEcon || "-";
+            document.getElementById('modalCustomer').innerText = log.customer || "-";
+            document.getElementById('modalRecorder').innerText = log.recorder || "-";
+            document.getElementById('modalPartName').innerText = log.partName || "-";
+            document.getElementById('modalCategory').innerText = log.category || "-";
+            document.getElementById('modalDetail').innerText = log.detail || "-";
+            document.getElementById('modalAction').innerText = log.action || "-";
+
+            const imgSection = document.getElementById('modalImageSection');
+            const imgTag = document.getElementById('modalImage');
+
+            if (log.image) {
+                imgTag.src = log.image;
+                imgSection.classList.remove('hidden');
+            } else {
+                imgTag.src = "";
+                imgSection.classList.add('hidden');
+            }
+
+            cancelEditMode();
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+
+        function enterEditMode() {
+            if (!activeModalLog) return;
+
+            document.getElementById('modalTitleText').innerText = "แก้ไขบันทึกปัญหาการผลิต";
+            document.getElementById('modalViewMode').classList.add('hidden');
+            document.getElementById('modalViewFooter').classList.add('hidden');
+            document.getElementById('modalEditMode').classList.remove('hidden');
+
+            document.getElementById('editSummaryLot').innerText = activeModalLog.lot || "-";
+            document.getElementById('editSummaryCustomer').innerText = activeModalLog.customer || "-";
+            document.getElementById('editSummaryPart').innerText = activeModalLog.partName || "-";
+
+            const procSelect = document.getElementById('editProcessSelect');
+            procSelect.value = activeModalLog.process || "";
+
+            const machSelect = document.getElementById('editMachineSelect');
+            populateMachineSelect(machSelect, procSelect.value, "-- เลือกเครื่องจักร --");
+            machSelect.value = activeModalLog.machine || "";
+
+            document.getElementById('editDefectCategory').value = activeModalLog.category || "";
+            document.getElementById('editRecorderName').value = activeModalLog.recorder && activeModalLog.recorder !== "-" ? activeModalLog.recorder : "";
+            document.getElementById('editDefectDetail').value = activeModalLog.detail || "";
+            document.getElementById('editCorrectiveAction').value = activeModalLog.action || "";
+
+            document.getElementById('editImageInput').value = "";
+            editNewImageBase64 = "";
+            const previewWrap = document.getElementById('editImagePreviewWrap');
+            const previewImg = document.getElementById('editImagePreview');
+            if (activeModalLog.image) {
+                previewImg.src = activeModalLog.image;
+                previewWrap.classList.remove('hidden');
+            } else {
+                previewImg.src = "";
+                previewWrap.classList.add('hidden');
+            }
+        }
+
+        function handleEditProcessChange() {
+            const proc = document.getElementById('editProcessSelect')?.value || "";
+            const machSelect = document.getElementById('editMachineSelect');
+            populateMachineSelect(machSelect, proc, "-- เลือกเครื่องจักร --");
+        }
+
+        function handleEditImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            compressImageFile(file, function(base64Str) {
+                editNewImageBase64 = base64Str;
+                document.getElementById('editImagePreview').src = base64Str;
+                document.getElementById('editImagePreviewWrap').classList.remove('hidden');
+            });
+        }
+
+        function cancelEditMode() {
+            document.getElementById('modalTitleText').innerText = "รายละเอียดบันทึกปัญหาการผลิต";
+            document.getElementById('modalEditMode').classList.add('hidden');
+            document.getElementById('modalViewMode').classList.remove('hidden');
+            document.getElementById('modalViewFooter').classList.remove('hidden');
+        }
+
+        async function saveEditedLog(event) {
+            event.preventDefault();
+            if (!activeModalLog) return;
+
+            const saveBtn = document.getElementById('saveEditBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerText = "กำลังบันทึกการแก้ไข...";
+
+            const recorderVal = document.getElementById('editRecorderName').value.trim() || "-";
+
+            const updatedPayload = {
+                actionType: "update",
+                rowNumber: activeModalLog.rowNumber,
+                isoDate: activeModalLog.isoDate || parseDateToISO(activeModalLog.date),
+                date: activeModalLog.date,
+                process: document.getElementById('editProcessSelect').value,
+                lot: activeModalLog.lot,
+                codeEcon: activeModalLog.codeEcon || "-",
+                partName: activeModalLog.partName || "-",
+                customer: activeModalLog.customer || "-",
+                machine: document.getElementById('editMachineSelect').value,
+                category: document.getElementById('editDefectCategory').value,
+                detail: document.getElementById('editDefectDetail').value.trim(),
+                action: document.getElementById('editCorrectiveAction').value.trim(),
+                recorder: recorderVal,
+                existingImage: activeModalLog.image || "",
+                image: editNewImageBase64 || ""
+            };
+
+            if (GAS_URL === "YOUR_GAS_WEB_APP_URL") {
+                Object.assign(activeModalLog, {
+                    ...updatedPayload,
+                    image: editNewImageBase64 || activeModalLog.image || ""
+                });
+                saveBtn.disabled = false;
+                saveBtn.innerText = "💾 บันทึกการแก้ไข";
+                renderAllDashboardSections();
+                renderRecordHistoryTable(defectLogs);
+                openDetailModal(activeModalLog);
+                alert("แก้ไขข้อมูลในโหมดทดสอบเรียบร้อยแล้ว");
+                return;
+            }
+
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: "POST",
+                    body: JSON.stringify(updatedPayload)
+                });
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    saveBtn.disabled = false;
+                    saveBtn.innerText = "💾 บันทึกการแก้ไข";
+                    await loadHistoryFromSheet();
+                    closeDetailModal();
+                    alert("แก้ไขข้อมูลลง Google Sheet เรียบร้อยแล้ว!");
+                } else {
+                    alert("เกิดข้อผิดพลาดในการแก้ไข: " + result.message);
+                    saveBtn.disabled = false;
+                    saveBtn.innerText = "💾 บันทึกการแก้ไข";
+                }
+            } catch (err) {
+                alert("ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้: " + err);
+                saveBtn.disabled = false;
+                saveBtn.innerText = "💾 บันทึกการแก้ไข";
+            }
+        }
+
+        function closeDetailModal() {
+            activeModalLog = null;
+            editNewImageBase64 = "";
+            cancelEditMode();
+            document.getElementById('detailModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
